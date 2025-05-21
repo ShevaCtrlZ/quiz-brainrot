@@ -242,6 +242,7 @@ export default function App() {
   const [questions, setQuestions] = useState([]);
   const [isPaused, setIsPaused] = useState(false);
   const [musicOn, setMusicOn] = useState(false);
+  const [userAnswers, setUserAnswers] = useState([]);
   const audioRef = useRef(null);
 
   // Saat mulai quiz, acak soal dan jawaban
@@ -304,13 +305,17 @@ export default function App() {
   };
 
   const handleAnswer = (index) => {
-    if (index === questions[current].answer) {
-      setScore(score + 1);
+    const isCorrect = index === questions[current].answer;
+    if (isCorrect) {
+      setScore((prev) => prev + 1);
     }
+
+    setUserAnswers((prev) => [...prev, index]);
+
     const next = current + 1;
     if (next < questions.length) {
       setCurrent(next);
-      setTimeLeft(10); // reset timer di sini
+      setTimeLeft(10);
     } else {
       setShowResult(true);
     }
@@ -323,6 +328,7 @@ export default function App() {
     setHasStarted(false);
     setName("");
     setQuestions([]);
+    setUserAnswers([]);
     setIsPaused(false);
     if (audioRef.current) {
       audioRef.current.currentTime = 0;
@@ -391,11 +397,10 @@ export default function App() {
         <div className="flex justify-end mb-2">
           <button
             onClick={() => setMusicOn((prev) => !prev)}
-            className={`px-3 py-1 rounded-lg font-semibold transition ${
-              musicOn
+            className={`px-3 py-1 rounded-lg font-semibold transition ${musicOn
                 ? "bg-purple-100 text-purple-700 hover:bg-purple-200"
                 : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-            }`}
+              }`}
             aria-label={musicOn ? "Matikan Musik" : "Nyalakan Musik"}
           >
             {musicOn ? "🔊 Musik ON" : "🔇 Musik OFF"}
@@ -405,12 +410,42 @@ export default function App() {
           <div className="text-center">
             <h2 className="text-2xl font-bold mb-4 text-purple-700">Skor Akhir</h2>
             <p className="mb-2 text-gray-700">Terima kasih, <span className="font-semibold">{name}</span>!</p>
-            <p className="text-lg text-gray-800">
+            <p className="text-lg text-gray-800 mb-4">
               Kamu menjawab <span className="font-bold text-purple-600">{score}</span> dari <span className="font-bold">{questions.length}</span> soal dengan benar.
             </p>
+
+            <div className="text-left max-h-96 overflow-y-auto mb-4">
+              {questions.map((q, index) => {
+                const userAnswer = userAnswers[index];
+                const isCorrect = userAnswer === q.answer;
+                return (
+                  <div key={index} className="mb-4 p-3 border rounded-lg bg-gray-50">
+                    <div className="flex items-center gap-3 mb-2">
+                      {q.image && (
+                        <img
+                          src={q.image}
+                          alt={`Gambar soal ${index + 1}`}
+                          className="w-16 h-16 object-cover rounded shadow"
+                        />
+                      )}
+                      <p className="font-semibold">{index + 1}. {q.question}</p>
+                    </div>
+                    <p className="text-sm">Jawaban kamu:{" "}
+                      <span className={isCorrect ? "text-green-600" : "text-red-600"}>
+                        {q.options[userAnswer] || <em>Tidak dijawab</em>}
+                      </span>
+                    </p>
+                    {!isCorrect && (
+                      <p className="text-sm text-green-600">Jawaban benar: {q.options[q.answer]}</p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
             <button
               onClick={handleRestart}
-              className="mt-6 w-full py-2 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 transition"
+              className="mt-4 w-full py-2 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 transition"
             >
               Mulai Ulang
             </button>
