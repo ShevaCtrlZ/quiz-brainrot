@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 const quizData = [
   {
@@ -241,6 +241,8 @@ export default function App() {
   const [timeLeft, setTimeLeft] = useState(10);
   const [questions, setQuestions] = useState([]);
   const [isPaused, setIsPaused] = useState(false);
+  const [musicOn, setMusicOn] = useState(false);
+  const audioRef = useRef(null);
 
   // Saat mulai quiz, acak soal dan jawaban
   const startQuiz = () => {
@@ -266,7 +268,7 @@ export default function App() {
 
   useEffect(() => {
     if (!hasStarted || showResult || isPaused) return;
-    setTimeLeft(10);
+
     const timer = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
@@ -277,14 +279,25 @@ export default function App() {
         return prev - 1;
       });
     }, 1000);
+
     return () => clearInterval(timer);
     // eslint-disable-next-line
   }, [current, hasStarted, showResult, isPaused]);
+
+  useEffect(() => {
+    if (!audioRef.current) return;
+    if (musicOn) {
+      audioRef.current.play();
+    } else {
+      audioRef.current.pause();
+    }
+  }, [musicOn]);
 
   const handleTimeout = () => {
     const next = current + 1;
     if (next < questions.length) {
       setCurrent(next);
+      setTimeLeft(10); // reset timer di sini
     } else {
       setShowResult(true);
     }
@@ -297,34 +310,40 @@ export default function App() {
     const next = current + 1;
     if (next < questions.length) {
       setCurrent(next);
+      setTimeLeft(10); // reset timer di sini
     } else {
       setShowResult(true);
+    }
+  };
+
+  const handleRestart = () => {
+    setShowResult(false);
+    setCurrent(0);
+    setScore(0);
+    setHasStarted(false);
+    setName("");
+    setQuestions([]);
+    setIsPaused(false);
+    if (audioRef.current) {
+      audioRef.current.currentTime = 0;
     }
   };
 
   // Pause overlay
   if (isPaused) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-200 via-purple-200 to-pink-200 font-sans">
+      <div className="min-h-screen flex items-center justify-center bg-gray-100 font-sans">
         <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-md text-center">
           <h2 className="text-2xl font-bold mb-6 text-purple-700">Quiz Dijeda</h2>
           <button
             onClick={() => setIsPaused(false)}
-            className="w-full py-2 mb-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg font-semibold hover:from-purple-600 hover:to-pink-600 transition"
+            className="w-full py-2 mb-3 bg-purple-500 text-white rounded-lg font-semibold hover:from-purple-600 hover:to-pink-600 transition"
           >
             Lanjutkan
           </button>
           <button
-            onClick={() => {
-              setShowResult(false);
-              setCurrent(0);
-              setScore(0);
-              setHasStarted(false);
-              setName("");
-              setQuestions([]);
-              setIsPaused(false);
-            }}
-            className="w-full py-2 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-lg font-semibold hover:from-pink-600 hover:to-purple-600 transition"
+            onClick={handleRestart}
+            className="w-full py-2 bg-purple-500 text-white rounded-lg font-semibold hover:from-pink-600 hover:to-purple-600 transition"
           >
             Ulangi
           </button>
@@ -335,7 +354,7 @@ export default function App() {
 
   if (!hasStarted) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-200 via-purple-200 to-pink-200 font-sans">
+      <div className="min-h-screen flex items-center justify-center bg-gray-100 font-sans">
         <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md sm:max-w-lg md:max-w-xl lg:max-w-2xl">
           <h2 className="text-2xl font-bold mb-4 text-purple-700">Selamat datang di Kuis Brainrot!</h2>
           <p className="mb-2 text-gray-700">Masukkan nama kamu dulu ya:</p>
@@ -354,7 +373,7 @@ export default function App() {
                 alert("Tolong isi nama dulu 🙏");
               }
             }}
-            className="w-full py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg font-semibold hover:from-purple-600 hover:to-pink-600 transition"
+            className="w-full py-2 bg-purple-500 text-white rounded-lg font-semibold hover:from-purple-600 hover:to-pink-600 transition"
           >
             Mulai Kuis
           </button>
@@ -364,8 +383,24 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-200 via-purple-200 to-pink-200 font-sans">
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 font-sans">
+      {/* Musik player (hidden) */}
+      <audio ref={audioRef} src="/music.mp3" loop />
       <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md sm:max-w-lg md:max-w-xl lg:max-w-2xl">
+        {/* Tombol musik di pojok kanan atas */}
+        <div className="flex justify-end mb-2">
+          <button
+            onClick={() => setMusicOn((prev) => !prev)}
+            className={`px-3 py-1 rounded-lg font-semibold transition ${
+              musicOn
+                ? "bg-purple-100 text-purple-700 hover:bg-purple-200"
+                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+            }`}
+            aria-label={musicOn ? "Matikan Musik" : "Nyalakan Musik"}
+          >
+            {musicOn ? "🔊 Musik ON" : "🔇 Musik OFF"}
+          </button>
+        </div>
         {showResult ? (
           <div className="text-center">
             <h2 className="text-2xl font-bold mb-4 text-purple-700">Skor Akhir</h2>
@@ -374,15 +409,8 @@ export default function App() {
               Kamu menjawab <span className="font-bold text-purple-600">{score}</span> dari <span className="font-bold">{questions.length}</span> soal dengan benar.
             </p>
             <button
-              onClick={() => {
-                setShowResult(false);
-                setCurrent(0);
-                setScore(0);
-                setHasStarted(false);
-                setName("");
-                setQuestions([]);
-              }}
-              className="mt-6 w-full py-2 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-lg font-semibold hover:from-pink-600 hover:to-purple-600 transition"
+              onClick={handleRestart}
+              className="mt-6 w-full py-2 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 transition"
             >
               Mulai Ulang
             </button>
@@ -392,14 +420,14 @@ export default function App() {
             <div className="flex items-center justify-between mb-2">
               <h2 className="text-xl font-bold text-purple-700">{questions[current].question}</h2>
               <div className="flex items-center gap-2">
-                <span className={`font-mono text-lg px-3 py-1 rounded-full ${timeLeft <= 5 ? "bg-red-200 text-red-700" : "bg-purple-100 text-purple-700"}`}>
+                <span className={`font-mono text-lg px-3 py-1 rounded-full ${timeLeft <= 5 ? "bg-red-100 text-red-700" : "bg-gray-200 text-gray-700"}`}>
                   {timeLeft}s
                 </span>
                 <button
                   onClick={() => setIsPaused(true)}
-                  className="ml-2 px-3 py-1 bg-yellow-200 text-yellow-800 rounded-lg font-semibold hover:bg-yellow-300 transition"
+                  className="ml-2 px-3 py-1 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition"
                 >
-                  Pause
+                  <span className="material-icons">pause</span>
                 </button>
               </div>
             </div>
@@ -415,7 +443,7 @@ export default function App() {
                 <button
                   key={i}
                   onClick={() => handleAnswer(i)}
-                  className="w-full py-2 px-4 bg-purple-100 hover:bg-purple-200 text-purple-800 rounded-lg font-medium transition"
+                  className="w-full py-2 px-4 bg-gray-100 hover:bg-purple-100 text-gray-800 rounded-lg font-medium transition"
                   disabled={isPaused}
                 >
                   {opt}
